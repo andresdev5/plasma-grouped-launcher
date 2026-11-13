@@ -4,6 +4,8 @@ Lanzador de aplicaciones para **KDE Plasma 6** basado en el "Lanzador de aplicac
 
 Todo lo demás (búsqueda, todas las aplicaciones, lugares, botones de energía, ajustes) se comporta igual que el lanzador original.
 
+![Favoritos organizados en grupos plegables](docs/screenshot.png)
+
 ## Funciones
 
 - **Grupos plegables** con nombre: crear, renombrar, plegar/expandir, reordenar y eliminar.
