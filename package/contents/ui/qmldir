@@ -1,0 +1,33 @@
+singleton KickoffSingleton 1.0 KickoffSingleton.qml
+singleton ActionMenu 1.0 ActionMenu.qml
+AbstractKickoffItemDelegate 1.0 AbstractKickoffItemDelegate.qml
+ApplicationsPage 1.0 ApplicationsPage.qml
+BasePage 1.0 BasePage.qml
+ConfigGeneral 1.0 ConfigGeneral.qml
+ContainerModel 1.0 ContainerModel.qml
+DropAreaGridView 1.0 DropAreaGridView.qml
+DropAreaListView 1.0 DropAreaListView.qml
+EditableTitle 1.0 EditableTitle.qml
+EmptyPage 1.0 EmptyPage.qml
+FavoriteGroups 1.0 FavoriteGroups.qml
+FolderTile 1.0 FolderTile.qml
+Footer 1.0 Footer.qml
+FullRepresentation 1.0 FullRepresentation.qml
+GroupDropArea 1.0 GroupDropArea.qml
+GroupedFavoritesView 1.0 GroupedFavoritesView.qml
+GroupHeader 1.0 GroupHeader.qml
+GroupSection 1.0 GroupSection.qml
+Header 1.0 Header.qml
+HorizontalStackView 1.0 HorizontalStackView.qml
+KickoffDropArea 1.0 KickoffDropArea.qml
+KickoffGridDelegate 1.0 KickoffGridDelegate.qml
+KickoffGridView 1.0 KickoffGridView.qml
+KickoffListDelegate 1.0 KickoffListDelegate.qml
+KickoffListView 1.0 KickoffListView.qml
+LeaveButtons 1.0 LeaveButtons.qml
+ListOfGridsViewDelegate 1.0 ListOfGridsViewDelegate.qml
+ListOfGridsView 1.0 ListOfGridsView.qml
+NormalPage 1.0 NormalPage.qml
+PlacesPage 1.0 PlacesPage.qml
+SectionView 1.0 SectionView.qml
+VerticalStackView 1.0 VerticalStackView.qml

@@ -1,0 +1,24 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "andresdev5"
+            }
+        ],
+        "Category": "Application Launchers",
+        "Description": "Application Launcher with collapsible favorite groups and folders",
+        "Description[es]": "Lanzador de aplicaciones con grupos plegables y carpetas en favoritos",
+        "EnabledByDefault": true,
+        "Icon": "start-here-kde",
+        "Id": "com.github.andresdev5.kickoffgroups",
+        "License": "GPL-2.0+",
+        "Name": "Application Launcher (Groups)",
+        "Name[es]": "Lanzador de aplicaciones (grupos)",
+        "Version": "1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-Provides": [
+        "org.kde.plasma.launchermenu"
+    ]
+}
