@@ -178,9 +178,43 @@ FocusScope {
         }
     }
 
+    RowLayout {
+        id: createButtons
+        visible: root.openFolderId === ""
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: root.sidePadding + kickoff.backgroundMetrics.rightPadding
+        anchors.bottomMargin: root.sidePadding
+        spacing: Kirigami.Units.smallSpacing
+
+        CreateButton {
+            visible: root.store.sectionsEnabled
+            text: i18n("Nuevo grupo")
+            icon.name: "list-add"
+            onCreate: favoriteIds => {
+                root.store.createSectionWith(favoriteIds)
+                Qt.callLater(root.scrollToEnd)
+            }
+        }
+
+        CreateButton {
+            visible: root.store.foldersEnabled
+            text: i18n("Nueva carpeta")
+            icon.name: "folder-new"
+            onCreate: favoriteIds => {
+                root.store.createFolderWith(favoriteIds, "", "")
+                sectionsFlickable.contentY = 0
+            }
+        }
+    }
+
     Flickable {
         id: sectionsFlickable
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: createButtons.top
+        anchors.bottomMargin: Kirigami.Units.smallSpacing
         visible: root.openFolderId === ""
         clip: true
         contentWidth: width
@@ -224,38 +258,8 @@ FocusScope {
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: kickoff.backgroundMetrics.leftPadding
-                Layout.rightMargin: kickoff.backgroundMetrics.rightPadding
-                Layout.topMargin: Kirigami.Units.largeSpacing * 2
-                Layout.bottomMargin: KickoffSingleton.listItemMetrics.margins.bottom + root.sidePadding
-                spacing: Kirigami.Units.smallSpacing
-
-                Item {
-                    Layout.fillWidth: true
-                }
-
-                CreateButton {
-                    visible: root.store.sectionsEnabled
-                    text: i18n("Nuevo grupo")
-                    icon.name: "list-add"
-                    onCreate: favoriteIds => {
-                        root.store.createSectionWith(favoriteIds)
-                        Qt.callLater(root.scrollToEnd)
-                    }
-                }
-
-                CreateButton {
-                    visible: root.store.foldersEnabled
-                    text: i18n("Nueva carpeta")
-                    icon.name: "folder-new"
-                    onCreate: favoriteIds => {
-                        root.store.createFolderWith(favoriteIds, "", "")
-                        sectionsFlickable.contentY = 0
-                    }
-                }
-
+            Item {
+                Layout.preferredHeight: KickoffSingleton.listItemMetrics.margins.bottom
             }
         }
     }

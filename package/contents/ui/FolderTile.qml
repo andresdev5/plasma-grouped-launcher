@@ -170,7 +170,7 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
-        z: -1
+        enabled: !gridTitle.editing && !listTitle.editing
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onEntered: root.hoverEntered()
