@@ -9,12 +9,13 @@ Todo lo demás (búsqueda, todas las aplicaciones, lugares, botones de energía,
 ## Funciones
 
 - **Grupos plegables** con nombre: crear, renombrar, plegar/expandir, reordenar y eliminar.
-- **Carpetas**: se crean soltando una app sobre el centro de otra (o con el botón *Nueva carpeta*); al abrirlas se ven sus apps y se pueden renombrar.
-- **Arrastrar y soltar**:
-  - Soltar en el borde de otra app → reordena.
-  - Soltar en otro grupo o en su encabezado → mueve la app a ese grupo (un grupo plegado se expande al mantener la app encima).
-  - Soltar sobre una carpeta → la mete en la carpeta.
-  - Soltar en la flecha *Volver* de una carpeta abierta → la saca de la carpeta.
+- **Carpetas**: se crean soltando una app sobre el centro de otra (o con el botón *Nueva carpeta*); al abrirlas se ven sus apps y se pueden renombrar. Se muestran en la misma cuadrícula que las apps.
+- **Orden libre**: cada grupo y cada carpeta recuerdan el orden de sus apps y carpetas.
+- **Arrastrar y soltar** (apps y carpetas):
+  - Soltar en el borde izquierdo o derecho de otro elemento → lo coloca en esa posición.
+  - Soltar en otro grupo o en su encabezado → lo mueve a ese grupo (un grupo plegado se expande al mantener el elemento encima).
+  - Soltar una app sobre una carpeta → la mete en la carpeta.
+  - Soltar una app en la flecha *Volver* de una carpeta abierta → la saca de la carpeta.
 - **Menú contextual** de cada app con *Mover a grupo ▸* y *Mover a carpeta ▸*.
 - **Ajustes**: agrupar con *grupos plegables*, *carpetas* o *ambos*; favoritos en cuadrícula o en lista.
 - Conserva los favoritos del lanzador original al cambiarlo con *Mostrar alternativas…*.
