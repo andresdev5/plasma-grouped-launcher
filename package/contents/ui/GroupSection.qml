@@ -63,7 +63,7 @@ ColumnLayout {
                 : gridHolder.width - kickoff.backgroundMetrics.leftPadding - kickoff.backgroundMetrics.rightPadding
             readonly property int columns: Math.max(1, Math.floor(availableWidth / cellWidth))
 
-            x: root.listMode ? 0 : Math.round((gridHolder.width - width) / 2)
+            x: root.listMode ? 0 : kickoff.backgroundMetrics.leftPadding
             width: root.listMode ? gridHolder.width : columns * cellWidth
             height: cellHeight * Math.ceil(count / columns)
             cellWidth: root.listMode ? gridHolder.width : KickoffSingleton.gridCellSize
