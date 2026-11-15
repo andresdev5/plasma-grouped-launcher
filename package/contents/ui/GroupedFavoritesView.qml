@@ -23,11 +23,13 @@ FocusScope {
     readonly property Flickable flickable: openFolderId ? folderFlickable : sectionsFlickable
     property string openFolderId: ""
     property Flickable activeView: null
+    property bool keyboardNavigation: false
+    readonly property real sidePadding: Kirigami.Units.largeSpacing * 2
     readonly property Flickable view: activeView
     readonly property Item currentItem: activeView ? activeView.currentItem : null
 
     implicitWidth: KickoffSingleton.gridCellSize * kickoff.minimumGridRowCount
-        + kickoff.backgroundMetrics.leftPadding + kickoff.backgroundMetrics.rightPadding
+        + kickoff.backgroundMetrics.leftPadding + kickoff.backgroundMetrics.rightPadding + sidePadding * 2
         + (kickoff.mayHaveGridWithScrollBar ? scrollBar.implicitWidth : 0)
     implicitHeight: KickoffSingleton.gridCellSize * kickoff.minimumGridRowCount
         + KickoffSingleton.listItemMetrics.margins.top + KickoffSingleton.listItemMetrics.margins.bottom
@@ -86,9 +88,10 @@ FocusScope {
             }
             return
         }
+        keyboardNavigation = true
         activeView = next
         next.currentIndex = direction > 0 ? 0 : next.count - 1
-        next.currentItem?.forceActiveFocus(direction > 0 ? Qt.TabFocusReason : Qt.BacktabFocusReason)
+        next.forceActiveFocus(direction > 0 ? Qt.TabFocusReason : Qt.BacktabFocusReason)
         ensureVisible(next.currentItem)
     }
 
@@ -100,6 +103,7 @@ FocusScope {
         if (activeFocus && root.Window.activeFocusItem === root) {
             const target = activeView ?? contentViews()[0]
             if (target) {
+                keyboardNavigation = true
                 activeView = target
                 target.forceActiveFocus()
             }
@@ -127,6 +131,7 @@ FocusScope {
             if (!kickoff.expanded) {
                 root.closeFolder()
                 root.activeView = null
+                root.keyboardNavigation = false
                 sectionsFlickable.contentY = 0
             }
         }
@@ -197,11 +202,12 @@ FocusScope {
 
         ColumnLayout {
             id: sectionsColumn
-            width: sectionsFlickable.width - (scrollBar.visible ? scrollBar.width : 0)
+            x: root.sidePadding
+            width: sectionsFlickable.width - (scrollBar.visible ? scrollBar.width : 0) - root.sidePadding * 2
             spacing: 0
 
             Item {
-                Layout.preferredHeight: KickoffSingleton.listItemMetrics.margins.top
+                Layout.preferredHeight: KickoffSingleton.listItemMetrics.margins.top + root.sidePadding
             }
 
             Repeater {
@@ -222,9 +228,13 @@ FocusScope {
                 Layout.fillWidth: true
                 Layout.leftMargin: kickoff.backgroundMetrics.leftPadding
                 Layout.rightMargin: kickoff.backgroundMetrics.rightPadding
-                Layout.topMargin: Kirigami.Units.smallSpacing
-                Layout.bottomMargin: KickoffSingleton.listItemMetrics.margins.bottom
+                Layout.topMargin: Kirigami.Units.largeSpacing * 2
+                Layout.bottomMargin: KickoffSingleton.listItemMetrics.margins.bottom + root.sidePadding
                 spacing: Kirigami.Units.smallSpacing
+
+                Item {
+                    Layout.fillWidth: true
+                }
 
                 CreateButton {
                     visible: root.store.sectionsEnabled
@@ -241,14 +251,11 @@ FocusScope {
                     text: i18n("Nueva carpeta")
                     icon.name: "folder-new"
                     onCreate: favoriteIds => {
-                        root.store.createFolderWith(favoriteIds, "")
+                        root.store.createFolderWith(favoriteIds, "", "")
                         sectionsFlickable.contentY = 0
                     }
                 }
 
-                Item {
-                    Layout.fillWidth: true
-                }
             }
         }
     }
@@ -260,9 +267,9 @@ FocusScope {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.leftMargin: kickoff.backgroundMetrics.leftPadding
-            Layout.rightMargin: kickoff.backgroundMetrics.rightPadding
-            Layout.topMargin: KickoffSingleton.listItemMetrics.margins.top
+            Layout.leftMargin: kickoff.backgroundMetrics.leftPadding + root.sidePadding
+            Layout.rightMargin: kickoff.backgroundMetrics.rightPadding + root.sidePadding
+            Layout.topMargin: KickoffSingleton.listItemMetrics.margins.top + root.sidePadding
             spacing: Kirigami.Units.smallSpacing
 
             PC3.ToolButton {
@@ -335,7 +342,7 @@ FocusScope {
             Layout.fillHeight: true
             clip: true
             contentWidth: width
-            contentHeight: folderLoader.item ? folderLoader.item.implicitHeight : 0
+            contentHeight: (folderLoader.item ? folderLoader.item.implicitHeight : 0) + root.sidePadding
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
             pixelAligned: true
@@ -353,7 +360,8 @@ FocusScope {
 
             Loader {
                 id: folderLoader
-                width: folderFlickable.width - (folderScrollBar.visible ? folderScrollBar.width : 0)
+                x: root.sidePadding
+                width: folderFlickable.width - (folderScrollBar.visible ? folderScrollBar.width : 0) - root.sidePadding * 2
                 active: root.openFolderId !== "" && root.openedFolder !== null
                 sourceComponent: GroupSection {
                     section: ({ id: root.openFolderId, name: root.openedFolder?.name ?? "", collapsed: false })

@@ -4,7 +4,6 @@ AbstractKickoffItemDelegate 1.0 AbstractKickoffItemDelegate.qml
 ApplicationsPage 1.0 ApplicationsPage.qml
 BasePage 1.0 BasePage.qml
 ConfigGeneral 1.0 ConfigGeneral.qml
-ContainerModel 1.0 ContainerModel.qml
 DropAreaGridView 1.0 DropAreaGridView.qml
 DropAreaListView 1.0 DropAreaListView.qml
 EditableTitle 1.0 EditableTitle.qml
@@ -31,3 +30,4 @@ NormalPage 1.0 NormalPage.qml
 PlacesPage 1.0 PlacesPage.qml
 SectionView 1.0 SectionView.qml
 VerticalStackView 1.0 VerticalStackView.qml
+AppTile 1.0 AppTile.qml

@@ -21,7 +21,10 @@ QtObject {
     property var sections: []
     property var folders: []
     property var assignments: ({})
+    property var order: ({})
     property int revision: 0
+    property int favoritesRevision: 0
+    readonly property var rowCache: ({ revision: -1, rows: {} })
     property string pendingRenameId: ""
     property string savedText: ""
 
@@ -39,6 +42,19 @@ QtObject {
         }
     }
 
+    readonly property Connections favoritesWatcher: Connections {
+        target: root.favoritesModel
+        function onCountChanged() { Qt.callLater(root.bumpFavorites) }
+        function onDataChanged() { Qt.callLater(root.bumpFavorites) }
+        function onModelReset() { Qt.callLater(root.bumpFavorites) }
+        function onRowsMoved() { Qt.callLater(root.bumpFavorites) }
+        function onLayoutChanged() { Qt.callLater(root.bumpFavorites) }
+    }
+
+    function bumpFavorites(): void {
+        favoritesRevision++
+    }
+
     function load(): void {
         let parsed = {}
         try {
@@ -49,12 +65,13 @@ QtObject {
         sections = Array.isArray(parsed.sections) ? parsed.sections : []
         folders = Array.isArray(parsed.folders) ? parsed.folders : []
         assignments = parsed.assignments && typeof parsed.assignments === "object" ? parsed.assignments : {}
+        order = parsed.order && typeof parsed.order === "object" ? parsed.order : {}
         savedText = Plasmoid.configuration.groupsData
         revision++
     }
 
     function save(): void {
-        savedText = JSON.stringify({ sections, folders, assignments })
+        savedText = JSON.stringify({ sections, folders, assignments, order })
         Plasmoid.configuration.groupsData = savedText
         revision++
     }
@@ -118,13 +135,73 @@ QtObject {
         return String(model.data(model.index(row, 0), favoriteIdRole) ?? "")
     }
 
+    function rowMap(): var {
+        if (rowCache.revision !== favoritesRevision) {
+            const rows = {}
+            for (let row = 0; row < favoritesModel.count; ++row) {
+                rows[favoriteIdAt(favoritesModel, row)] = row
+            }
+            rowCache.rows = rows
+            rowCache.revision = favoritesRevision
+        }
+        return rowCache.rows
+    }
+
     function sourceRowOf(favoriteId: string): int {
-        for (let row = 0; row < favoritesModel.count; ++row) {
-            if (favoriteIdAt(favoritesModel, row) === favoriteId) {
-                return row
+        const row = rowMap()[favoriteId]
+        return row === undefined ? -1 : row
+    }
+
+    function favoriteData(favoriteId: string, role: int): var {
+        const row = sourceRowOf(favoriteId)
+        return row < 0 ? undefined : favoritesModel.data(favoritesModel.index(row, 0), role)
+    }
+
+    function entriesFor(containerId: string): var {
+        const rows = rowMap()
+        const appKeys = Object.keys(rows)
+            .filter(favoriteId => favoriteId && containerOf(favoriteId) === containerId)
+            .sort((a, b) => rows[a] - rows[b])
+            .map(favoriteId => "a:" + favoriteId)
+        const folderKeys = isFolder(containerId) ? [] : foldersIn(containerId).map(folder => "f:" + folder.id)
+        const available = folderKeys.concat(appKeys)
+        const availableSet = new Set(available)
+        const saved = (order[containerId] ?? []).filter(key => availableSet.has(key))
+        const savedSet = new Set(saved)
+        return saved.concat(available.filter(key => !savedSet.has(key))).map(key => ({
+            key,
+            kind: key.startsWith("f:") ? "folder" : "app",
+            id: key.slice(2),
+        }))
+    }
+
+    function placeKey(key: string, containerId: string, beforeKey: string): void {
+        const next = {}
+        for (const container in order) {
+            const keys = order[container].filter(existing => existing !== key)
+            if (keys.length > 0) {
+                next[container] = keys
             }
         }
-        return -1
+        const keys = entriesFor(containerId).map(entry => entry.key).filter(existing => existing !== key)
+        const at = beforeKey ? keys.indexOf(beforeKey) : -1
+        if (at >= 0) {
+            keys.splice(at, 0, key)
+        } else {
+            keys.push(key)
+        }
+        next[containerId] = keys
+        order = next
+    }
+
+    function setAssignment(favoriteId: string, containerId: string): void {
+        const next = Object.assign({}, assignments)
+        if (containerId) {
+            next[favoriteId] = containerId
+        } else {
+            delete next[favoriteId]
+        }
+        assignments = next
     }
 
     function updateSection(id: string, changes: var): void {
@@ -165,6 +242,11 @@ QtObject {
     }
 
     function removeSection(id: string): void {
+        const moved = entriesFor(id).map(entry => entry.key)
+        const nextOrder = Object.assign({}, order)
+        delete nextOrder[id]
+        nextOrder[""] = entriesFor("").map(entry => entry.key).concat(moved)
+        order = nextOrder
         sections = sections.filter(section => section.id !== id)
         folders = folders.map(folder => folder.section === id ? Object.assign({}, folder, { section: "" }) : folder)
         const next = Object.assign({}, assignments)
@@ -188,12 +270,25 @@ QtObject {
         updateFolder(id, { name })
     }
 
-    function moveFolderToSection(id: string, sectionId: string): void {
-        updateFolder(id, { section: sectionId })
+    function moveFolderTo(id: string, sectionId: string, beforeKey: string): void {
+        folders = folders.map(folder => folder.id === id ? Object.assign({}, folder, { section: sectionId }) : folder)
+        placeKey("f:" + id, sectionId, beforeKey)
+        save()
     }
 
     function removeFolder(id: string): void {
         const target = findFolder(id)?.section ?? ""
+        const visibleSection = folderSectionId(id)
+        const contents = entriesFor(id).map(entry => entry.key)
+        const sectionKeys = entriesFor(visibleSection).map(entry => entry.key)
+        const at = sectionKeys.indexOf("f:" + id)
+        if (at >= 0) {
+            sectionKeys.splice(at, 1, ...contents)
+        }
+        const nextOrder = Object.assign({}, order)
+        delete nextOrder[id]
+        nextOrder[visibleSection] = sectionKeys
+        order = nextOrder
         folders = folders.filter(folder => folder.id !== id)
         const next = Object.assign({}, assignments)
         for (const favoriteId in next) {
@@ -239,27 +334,22 @@ QtObject {
         return id
     }
 
-    function createFolderWith(favoriteIds: var, sectionId: string): string {
-        const id = addFolder(i18n("Nueva carpeta"), sectionId, favoriteIds)
+    function createFolderWith(favoriteIds: var, sectionId: string, beforeKey: string): string {
+        const folder = { id: newId("f"), name: i18n("Nueva carpeta"), section: sectionId }
+        folders = folders.concat([folder])
+        favoriteIds.forEach(favoriteId => setAssignment(favoriteId, folder.id))
+        placeKey("f:" + folder.id, sectionId, beforeKey ?? "")
+        save()
         favoriteIds.forEach(favoriteId => ensureFavorite(favoriteId))
-        pendingRenameId = id
-        return id
+        pendingRenameId = folder.id
+        return folder.id
     }
 
-    function moveFavoriteTo(favoriteId: string, containerId: string, beforeFavoriteId: string): void {
-        assign(favoriteId, containerId)
-        if (!favoritesModel.isFavorite(favoriteId)) {
-            const row = beforeFavoriteId ? sourceRowOf(beforeFavoriteId) : -1
-            favoritesModel.addFavorite(favoriteId, row)
-            return
-        }
-        if (beforeFavoriteId && beforeFavoriteId !== favoriteId) {
-            const from = sourceRowOf(favoriteId)
-            const to = sourceRowOf(beforeFavoriteId)
-            if (from >= 0 && to >= 0 && from !== to) {
-                favoritesModel.moveRow(from, to)
-            }
-        }
+    function moveFavoriteTo(favoriteId: string, containerId: string, beforeKey: string): void {
+        setAssignment(favoriteId, containerId)
+        placeKey("a:" + favoriteId, containerId, beforeKey)
+        save()
+        ensureFavorite(favoriteId)
     }
 
     function createActions(favoriteId: string): var {
@@ -343,12 +433,11 @@ QtObject {
     function handleAction(actionId: string, argument: var): void {
         const favoriteId = argument.favoriteId
         if (actionId === "_groups_assign") {
-            assign(favoriteId, argument.target)
-            ensureFavorite(favoriteId)
+            moveFavoriteTo(favoriteId, argument.target, "")
         } else if (actionId === "_groups_new_section") {
             createSectionWith([favoriteId])
         } else if (actionId === "_groups_new_folder") {
-            createFolderWith([favoriteId], argument.section ?? "")
+            createFolderWith([favoriteId], argument.section ?? "", "")
         }
     }
 

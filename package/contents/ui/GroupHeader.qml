@@ -23,6 +23,7 @@ Item {
     readonly property bool collapsed: section.collapsed === true
     readonly property Item draggedItem: kickoff.dragSource.sourceItem
     readonly property string draggedFavoriteId: draggedItem ? String(draggedItem.model?.favoriteId ?? "") : ""
+    readonly property string draggedFolderId: draggedItem ? String(draggedItem.draggedFolderId ?? "") : ""
 
     implicitHeight: Math.max(KickoffSingleton.compactListDelegateHeight, title.implicitHeight + Kirigami.Units.smallSpacing * 2)
 
@@ -91,7 +92,7 @@ Item {
         anchors.fill: parent
 
         onEntered: drag => {
-            if (drag.source === kickoff.dragSource && root.draggedFavoriteId) {
+            if (drag.source === kickoff.dragSource && (root.draggedFavoriteId || root.draggedFolderId)) {
                 drag.accept(Qt.MoveAction)
                 if (root.collapsed) {
                     expandTimer.restart()
@@ -103,11 +104,17 @@ Item {
         onExited: expandTimer.stop()
         onDropped: drop => {
             expandTimer.stop()
-            if (drop.source === kickoff.dragSource && root.draggedFavoriteId) {
+            if (drop.source === kickoff.dragSource && (root.draggedFavoriteId || root.draggedFolderId)) {
                 const favoriteId = root.draggedFavoriteId
+                const folderId = root.draggedFolderId
                 const sectionId = root.section.id
+                const store = root.store
                 drop.accept(Qt.MoveAction)
-                Qt.callLater(() => root.store.moveFavoriteTo(favoriteId, sectionId, ""))
+                if (folderId) {
+                    Qt.callLater(() => store.moveFolderTo(folderId, sectionId, ""))
+                } else {
+                    Qt.callLater(() => store.moveFavoriteTo(favoriteId, sectionId, ""))
+                }
             }
         }
     }
@@ -149,7 +156,7 @@ Item {
             visible: root.store.foldersEnabled
             text: i18n("Nueva carpeta en este grupo")
             icon: "folder-new"
-            onClicked: root.store.createFolderWith([], root.section.id)
+            onClicked: root.store.createFolderWith([], root.section.id, "")
         }
         PlasmaExtras.MenuItem {
             separator: true

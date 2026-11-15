@@ -8,43 +8,70 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components as PC3
+import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.extras as PlasmaExtras
-import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
+import org.kde.kirigami as Kirigami
 
 Item {
     id: root
 
-    required property var folder
+    required property string folderId
     property bool listMode: false
+    property bool current: false
+    property bool highlightActive: false
+    property bool keyboardSelected: false
 
     readonly property var store: kickoff.favoriteGroups
-    readonly property Item draggedItem: kickoff.dragSource.sourceItem
-    readonly property string draggedFavoriteId: draggedItem ? String(draggedItem.model?.favoriteId ?? "") : ""
-    readonly property ContainerModel contentModel: ContainerModel {
-        containerId: root.folder.id
-    }
+    readonly property var folder: store.revision >= 0 ? store.findFolder(folderId) : null
+    readonly property string folderName: folder?.name ?? ""
+    readonly property var contents: store.revision >= 0 && store.favoritesRevision >= 0 ? store.entriesFor(folderId) : []
+    readonly property var model: ({ favoriteId: "" })
+    readonly property string draggedFolderId: folderId
+    readonly property Item dragIcon: listMode ? listPreview : gridPreview
 
     signal openRequested()
+    signal hoverEntered()
 
-    activeFocusOnTab: true
-    implicitWidth: listMode ? Kirigami.Units.gridUnit * 10 : KickoffSingleton.gridCellSize
-    implicitHeight: listMode ? kickoff.listDelegateHeight : KickoffSingleton.gridCellSize
+    function activate(): void {
+        root.openRequested()
+    }
+
+    function openMenu(x: var, y: var): void {
+        if (x !== undefined && y !== undefined) {
+            menu.open(x, y)
+        } else {
+            menu.openRelative()
+        }
+    }
+
+    function performDrag(active: bool): void {
+        if (!active) {
+            kickoff.dragSource.Drag.active = false
+            kickoff.dragSource.Drag.imageSource = ""
+            kickoff.dragSource.sourceItem = null
+            return
+        }
+        root.dragIcon.grabToImage(result => {
+            if (!dragHandler.active) {
+                return
+            }
+            kickoff.dragSource.sourceItem = root
+            kickoff.dragSource.Drag.imageSource = result.url
+            kickoff.dragSource.Drag.mimeData = { "text/plain": root.folderName }
+            kickoff.dragSource.Drag.active = true
+        })
+    }
 
     Accessible.role: Accessible.Button
-    Accessible.name: i18n("Carpeta %1", folder.name)
-
-    Keys.onReturnPressed: root.openRequested()
-    Keys.onEnterPressed: root.openRequested()
-    Keys.onSpacePressed: root.openRequested()
-    Keys.onMenuPressed: menu.openRelative()
+    Accessible.name: i18n("Carpeta %1", folderName)
 
     PlasmaExtras.Highlight {
         anchors.fill: parent
         hovered: true
         pressed: mouseArea.pressed
-        active: dropArea.containsDrag || root.activeFocus
-        visible: mouseArea.containsMouse || dropArea.containsDrag || root.activeFocus
+        active: root.highlightActive
+        visible: mouseArea.containsMouse || (root.current && root.keyboardSelected)
     }
 
     component Preview: Rectangle {
@@ -53,7 +80,7 @@ Item {
         implicitWidth: size
         implicitHeight: size
         radius: Kirigami.Units.cornerRadius
-        color: Qt.alpha(Kirigami.Theme.textColor, dropArea.containsDrag ? 0.25 : 0.12)
+        color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
         border.width: 1
         border.color: Qt.alpha(Kirigami.Theme.textColor, 0.2)
 
@@ -63,14 +90,12 @@ Item {
             spacing: Math.max(1, Math.round(preview.size / 16))
 
             Repeater {
-                model: root.contentModel
+                model: root.contents.slice(0, 4)
                 delegate: Kirigami.Icon {
-                    required property var decoration
-                    required property int index
-                    visible: index < 4
+                    required property var modelData
                     width: Math.floor((preview.size - preview.size / 4) / 2)
                     height: width
-                    source: decoration
+                    source: root.store.favoriteData(modelData.id, 1) ?? ""
                     animated: false
                 }
             }
@@ -80,7 +105,7 @@ Item {
             anchors.centerIn: parent
             width: preview.size * 0.6
             height: width
-            visible: root.contentModel.count === 0
+            visible: root.contents.length === 0
             source: "folder-symbolic"
             opacity: 0.6
         }
@@ -96,6 +121,7 @@ Item {
         spacing: KickoffSingleton.fontMetrics.descent
 
         Preview {
+            id: gridPreview
             Layout.alignment: Qt.AlignHCenter | Qt.AlignBottom
         }
 
@@ -104,12 +130,12 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: KickoffSingleton.fontMetrics.height * 2
             Layout.alignment: Qt.AlignHCenter | Qt.AlignTop
-            itemId: root.listMode ? "" : root.folder.id
-            text: root.folder.name
+            itemId: root.listMode ? "" : root.folderId
+            text: root.folderName
             horizontalAlignment: Text.AlignHCenter
             maximumLineCount: 2
             onClicked: root.openRequested()
-            onRenamed: name => root.store.renameFolder(root.folder.id, name)
+            onRenamed: name => root.store.renameFolder(root.folderId, name)
         }
     }
 
@@ -121,6 +147,7 @@ Item {
         spacing: Kirigami.Units.smallSpacing * 2
 
         Preview {
+            id: listPreview
             size: Plasmoid.configuration.compactMode ? Kirigami.Units.iconSizes.smallMedium : Kirigami.Units.iconSizes.medium
         }
 
@@ -128,14 +155,14 @@ Item {
             id: listTitle
             Layout.fillWidth: true
             Layout.fillHeight: true
-            itemId: root.listMode ? root.folder.id : ""
-            text: root.folder.name
+            itemId: root.listMode ? root.folderId : ""
+            text: root.folderName
             onClicked: root.openRequested()
-            onRenamed: name => root.store.renameFolder(root.folder.id, name)
+            onRenamed: name => root.store.renameFolder(root.folderId, name)
         }
 
         PC3.Label {
-            text: root.contentModel.count
+            text: root.contents.length
             opacity: 0.7
         }
     }
@@ -146,39 +173,31 @@ Item {
         z: -1
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: mouse => {
+        onEntered: root.hoverEntered()
+        onPressed: mouse => {
+            root.hoverEntered()
             if (mouse.button === Qt.RightButton) {
-                menu.open(mouse.x, mouse.y)
-            } else {
+                root.openMenu(mouse.x, mouse.y)
+            }
+        }
+        onClicked: mouse => {
+            if (mouse.button === Qt.LeftButton) {
                 root.openRequested()
             }
         }
     }
 
-    PC3.ToolTip.text: root.folder.name
+    DragHandler {
+        id: dragHandler
+        target: null
+        enabled: Plasmoid.immutability !== PlasmaCore.Types.SystemImmutable
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+        onActiveChanged: root.performDrag(active)
+    }
+
+    PC3.ToolTip.text: root.folderName
     PC3.ToolTip.visible: mouseArea.containsMouse && !root.listMode
     PC3.ToolTip.delay: Kirigami.Units.toolTipDelay
-
-    DropArea {
-        id: dropArea
-        anchors.fill: parent
-
-        onEntered: drag => {
-            if (drag.source === kickoff.dragSource && root.draggedFavoriteId) {
-                drag.accept(Qt.MoveAction)
-            } else {
-                drag.accepted = false
-            }
-        }
-        onDropped: drop => {
-            if (drop.source === kickoff.dragSource && root.draggedFavoriteId) {
-                const favoriteId = root.draggedFavoriteId
-                const folderId = root.folder.id
-                drop.accept(Qt.MoveAction)
-                Qt.callLater(() => root.store.moveFavoriteTo(favoriteId, folderId, ""))
-            }
-        }
-    }
 
     PlasmaExtras.Menu {
         id: menu
@@ -207,7 +226,7 @@ Item {
         PlasmaExtras.MenuItem {
             text: i18n("Eliminar carpeta (las apps vuelven al grupo)")
             icon: "edit-delete"
-            onClicked: root.store.removeFolder(root.folder.id)
+            onClicked: root.store.removeFolder(root.folderId)
         }
     }
 
@@ -218,8 +237,8 @@ Item {
             required property var modelData
             text: modelData.id === "" ? i18n("Mover a: sin grupo") : i18n("Mover a: %1", modelData.name)
             icon: "go-jump"
-            visible: modelData.id !== root.store.folderSectionId(root.folder.id)
-            onClicked: root.store.moveFolderToSection(root.folder.id, modelData.id)
+            visible: modelData.id !== root.store.folderSectionId(root.folderId)
+            onClicked: root.store.moveFolderTo(root.folderId, modelData.id, "")
         }
         onObjectAdded: (index, object) => menu.addMenuItem(object, deleteSeparator)
         onObjectRemoved: (index, object) => menu.removeMenuItem(object)
